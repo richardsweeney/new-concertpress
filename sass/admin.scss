@@ -1,0 +1,52 @@
+@import "compass";
+
+#convertpress-event-date-meta,
+#convertpress-event-programme-meta,
+#convertpress-event-venue-meta {
+    .inside {
+        padding: 5px 15px 5px;
+    }
+}
+
+.new-trigger {
+    margin: 15px 0 0;
+}
+
+.new label,
+.concertpress-label {
+    display: block;
+    font-weight: bold;
+    margin: 5px 0 2px;
+}
+
+.concertpress-select {
+    min-width: 300px;
+}
+
+.new {
+    padding-top: 10px;
+    input {
+        min-width: 50%;
+        padding: 5px;
+        outline: 0;
+        margin-bottom: 10px;
+        @include box-sizing( border-box );
+    }
+}
+
+.date {
+    input {
+        min-width: 25%;
+        padding: 5px;
+        outline: 0;
+        margin-bottom: 10px;
+        @include box-sizing( border-box );
+    }
+}
+
+#wp-programme-content-wrap {
+    margin-top: -30px; // No media buttons - so we need to readjust the alignment
+}
+#programme-content_ifr {
+    background: #fff;
+}

@@ -1,1 +1,60 @@
-/* This stylesheet is used to style the admin option form of the plugin. */
+/* line 6, ../sass/admin.scss */
+#convertpress-event-date-meta .inside,
+#convertpress-event-programme-meta .inside,
+#convertpress-event-venue-meta .inside {
+  padding: 5px 15px 5px;
+}
+
+/* line 11, ../sass/admin.scss */
+.new-trigger {
+  margin: 15px 0 0;
+}
+
+/* line 16, ../sass/admin.scss */
+.new label,
+.concertpress-label {
+  display: block;
+  font-weight: bold;
+  margin: 5px 0 2px;
+}
+
+/* line 22, ../sass/admin.scss */
+.concertpress-select {
+  min-width: 300px;
+}
+
+/* line 26, ../sass/admin.scss */
+.new {
+  padding-top: 10px;
+}
+/* line 28, ../sass/admin.scss */
+.new input {
+  min-width: 50%;
+  padding: 5px;
+  outline: 0;
+  margin-bottom: 10px;
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+}
+
+/* line 38, ../sass/admin.scss */
+.date input {
+  min-width: 25%;
+  padding: 5px;
+  outline: 0;
+  margin-bottom: 10px;
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+}
+
+/* line 47, ../sass/admin.scss */
+#wp-programme-content-wrap {
+  margin-top: -30px;
+}
+
+/* line 50, ../sass/admin.scss */
+#programme-content_ifr {
+  background: #fff;
+}
