@@ -35,8 +35,8 @@
 }
 
 .date {
-    input {
-        min-width: 25%;
+    input[type='text'] {
+        width: 120px;
         padding: 5px;
         outline: 0;
         margin-bottom: 10px;
@@ -50,3 +50,27 @@
 #programme-content_ifr {
     background: #fff;
 }
+
+#convertpress-venue-meta {
+    margin-top: -20px;
+}
+
+
+
+.edit-programme,
+.edit-venue {
+    #edit-slug-box {
+        display: none;
+    }
+}
+
+.edit-event .tablenav .alignleft.actions {
+    background: red;
+    select[name="m"],
+    input#post-query-submit {
+        display: none;
+    }
+}
+
+
+

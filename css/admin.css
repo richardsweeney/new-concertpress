@@ -39,8 +39,8 @@
 }
 
 /* line 38, ../sass/admin.scss */
-.date input {
-  min-width: 25%;
+.date input[type='text'] {
+  width: 120px;
   padding: 5px;
   outline: 0;
   margin-bottom: 10px;
@@ -57,4 +57,25 @@
 /* line 50, ../sass/admin.scss */
 #programme-content_ifr {
   background: #fff;
+}
+
+/* line 54, ../sass/admin.scss */
+#convertpress-venue-meta {
+  margin-top: -20px;
+}
+
+/* line 62, ../sass/admin.scss */
+.edit-programme #edit-slug-box,
+.edit-venue #edit-slug-box {
+  display: none;
+}
+
+/* line 67, ../sass/admin.scss */
+.edit-event .tablenav .alignleft.actions {
+  background: red;
+}
+/* line 70, ../sass/admin.scss */
+.edit-event .tablenav .alignleft.actions select[name="m"],
+.edit-event .tablenav .alignleft.actions input#post-query-submit {
+  display: none;
 }
