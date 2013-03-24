@@ -66,6 +66,18 @@ class ConcertPress {
 		register_deactivation_hook( __FILE__, array( $this, 'deactivate' ) );
 		register_uninstall_hook( __FILE__, 'ConcertPress::uninstall' );
 
+		// Diverse text changes
+		add_filter( 'enter_title_here', array( $this, 'custom_enter_title_here' ) );
+		add_filter( 'admin_body_class', array( $this, 'body_class_names' ) );
+
+		// Custom columns mojo for events
+		add_action( 'manage_event_posts_custom_column', array( $this, 'manage_event_custom_column' ), 10, 2 );
+		add_filter( 'manage_edit-event_columns', array( $this, 'set_custom_edit_event_columns' ) );
+		add_filter( 'manage_edit-event_sortable_columns', array( $this, 'event_column_register_sortable' ) );
+		add_filter( 'request', array( $this, 'event_column_orderby' ) );
+		if ( is_admin() )
+			add_filter( 'pre_get_posts', array( $this, 'cp_pre_get_posts' ) );
+
 	    /*
 	     * TODO:
 	     * Define the custom functionality for your plugin. The first parameter of the
@@ -125,7 +137,7 @@ class ConcertPress {
 	 */
 	function register_admin_styles() {
 
-		if ( 'event' == get_current_screen()->id ) {
+		if ( in_array( get_current_screen()->id, array( 'event', 'venue', 'programme' ) ) ) {
 
 			wp_enqueue_style( 'jquery-ui', 'http://code.jquery.com/ui/1.10.2/themes/smoothness/jquery-ui.css' );
 			wp_enqueue_style( 'concertpress-admin-styles', plugins_url( 'concertpress/css/admin.css' ) );
@@ -138,12 +150,19 @@ class ConcertPress {
 	 */
 	function register_admin_scripts() {
 
-		if ( 'event' == get_current_screen()->id ) {
+		echo get_option( 'date_format' );
+
+		if ( in_array( get_current_screen()->id, array( 'event' ) ) ) {
 			wp_enqueue_script( 'jquery' );
 			wp_enqueue_script( 'jquery-ui-core' );
 			wp_enqueue_script( 'jquery-ui-datepicker' );
-			wp_enqueue_script( 'concertpress-admin-script', plugins_url( 'concertpress/js/admin.js' ), array( 'jquery' ), CP_PLUGIN_VERSION, true );
+			wp_enqueue_script( 'concertpress_admin_js', plugins_url( 'concertpress/js/admin.js' ), array( 'jquery' ), CP_PLUGIN_VERSION, true );
 		}
+		$i18n = array(
+			'date_format' => get_option( 'date_format' ),
+			'language'	  => get_bloginfo( 'language' ),
+		);
+		wp_localize_script( 'jquery', 'cp', $i18n );
 
 	} // end register_admin_scripts
 
@@ -205,35 +224,31 @@ class ConcertPress {
 				'plural_name'          => __( 'events', 'concertpress' ),
 				'slug'                 => 'event',
 				'menu_position'        => 30,
-				'register_meta_box_cb' => array( $this, 'register_meta_boxes' ),
+				'supports'             => array( 'title', 'thumbnail' ),
+				'register_meta_box_cb' => array( $this, 'register_event_meta_boxes' ),
 			),
 			array(
-				'name'          => 'programme',
-				'singular_name' => __( 'programme', 'concertpress' ),
-				'plural_name'   => __( 'programmes', 'concertpress' ),
-				'show_ui'       => false,
+				'name'                => 'programme',
+				'singular_name'       => __( 'programme', 'concertpress' ),
+				'plural_name'         => __( 'programmes', 'concertpress' ),
+				'show_in_menu'        => 'edit.php?post_type=event',
+				'supports'            => array( 'title', 'editor' ),
+				'exclude_from_search' => true,
+				'publicly_queryable'  => false,
 			),
 			array(
-				'name'          => 'venue',
-				'singular_name' => __( 'venue', 'concertpress' ),
-				'plural_name'   => __( 'venues', 'concertpress' ),
-				'show_ui'       => false,
+				'name'                 => 'venue',
+				'singular_name'        => __( 'venue', 'concertpress' ),
+				'plural_name'          => __( 'venues', 'concertpress' ),
+				'show_in_menu'         => 'edit.php?post_type=event',
+				'supports'             => false,
+				'register_meta_box_cb' => array( $this, 'register_venue_meta_boxes' ),
+				'exclude_from_search'  => true,
+				'publicly_queryable'   => false,
 			),
 		);
 		foreach( $cpts as $cpt )
     		$this->create_post_type( $cpt );
-
-  // 		$post = array(
-		// 	'post_content' => '',
-		// 	'post_name'    => 'palladium',
-		// 	'post_status'  => 'publish',
-		// 	'post_title'   => 'Palladium',
-		// 	'post_type'    => 'venue',
-		// );
-		// $id = wp_insert_post( $post );
-		// add_post_meta( $id, '_url', 'http://google.com' );
-		// add_post_meta( $id, '_address', 'Torupsgatan 1D, 217 73 Malmö' );
-		// add_post_meta( $id, '_email', 'theorboman@gmail.com' );
 
     }
 
@@ -271,15 +286,141 @@ class ConcertPress {
 
 	}
 
+	function custom_enter_title_here( $text ) {
+		switch ( get_current_screen()->id ) {
+
+			case 'venue' :
+				$text = __( 'Venue name', 'concertpress' );
+				break;
+
+			case 'programme' :
+				$text = __( 'Programme title', 'concertpress' );
+				break;
+
+			case 'event' :
+				$text = __( 'Event title', 'concertpress' );
+				break;
+
+		}
+		return $text;
+	}
+
+
+
+	function manage_event_custom_column( $column, $post_id ) {
+		switch ( $column ) {
+
+			case 'programme' :
+				$pid = get_post_meta( $post_id, '_programme', true );
+				if ( $pid )
+					echo '<a href="' . admin_url( "post.php?post=$pid&action=edit" ) . '">' . get_the_title( $pid ) . '</a>';
+				else
+					echo '--';
+				break;
+
+			case 'venue' :
+				$vid = get_post_meta( $post_id, '_venue', true );
+				if ( $vid )
+					echo '<a href="' . admin_url( "post.php?post=$vid&action=edit" ) . '">' . get_the_title( $vid ) . '</a>';
+				else
+					echo '--';
+				break;
+
+			case 'cp-date' :
+				$date = get_post_meta( $post_id, '_start_date', true );
+				if ( $date )
+					echo date_i18n( get_option( 'date_format' ), $date );
+				else
+					echo '--';
+				break;
+
+		}
+
+	}
+
+
+
+	function set_custom_edit_event_columns( $columns ) {
+		unset( $columns['date'] );
+		$columns['programme'] = __( 'Programme', 'concertpress' );
+		$columns['venue']     = __( 'Venue', 'concertpress' );
+		$columns['cp-date']   = __( 'Event Date', 'concertpress' );
+		$columns['date']	  = __( 'Date' );
+	    return $columns;
+	}
+
+
+
+	function event_column_register_sortable( $columns ) {
+	    // $columns['programme'] = 'programme';
+	    // $columns['venue']     = 'venue';
+		$columns['cp-date']   = 'cp-date';
+		unset( $columns['date'] );
+
+	    return $columns;
+	}
+
+
+
+	function event_column_orderby( $vars ) {
+	    if ( isset( $vars['orderby'] ) )
+	    	return $vars;
+
+	    if ( 'cp-date' == $vars['orderby'] ) {
+	        $vars = array_merge( $vars, array(
+				'meta_key' => '_start_date',
+				'orderby'  => 'meta_value_num',
+	        ) );
+	    }
+
+	    return $vars;
+	}
+
+
+
+	function cp_pre_get_posts( $query ) {
+
+		if ( ! isset( $query->query_vars['post_type'] ) )
+			return $query;
+
+		switch ( $query->query_vars['post_type'] ) {
+
+			case 'event' :
+
+				if ( !isset( $query->query_vars['orderby'] ) ) {
+					$query->set( 'meta_key', '_start_date' );
+					$query->set( 'orderby', 'meta_value_num' );
+					$query->set( 'order', 'asc' );
+				}
+
+				break;
+
+			default :
+				break;
+
+		}
+		return $query;
+	}
+
+
+	function body_class_names( $classes ) {
+		global $post;
+		if ( in_array( $post->post_type, array( 'event', 'programme', 'venue' ) ) )
+			$classes .= 'edit-' . $post->post_type;
+
+		return $classes;
+	}
+
+
 
 	/** Register meta boxes */
-	function register_meta_boxes() {
+	function register_event_meta_boxes() {
 		add_meta_box(
 			'convertpress-event-date-meta',
 			__( 'Date', 'ibmetall' ),
 			array( $this, 'print_event_date_meta' ),
 			'event',
-			'normal',
+			'side',
 			'high'
 		);
 		add_meta_box(
@@ -299,6 +440,19 @@ class ConcertPress {
 			'high'
 		);
 	}
+
+	function register_venue_meta_boxes() {
+		add_meta_box(
+			'convertpress-venue-meta',
+			__( 'Venue Details', 'ibmetall' ),
+			array( $this, 'print_venue_meta' ),
+			'venue',
+			'normal',
+			'high'
+		);
+	}
+
+
 
 	private function print_select_lists( $type = 'programme' ) {
 		global $wpdb, $post;
@@ -349,6 +503,8 @@ class ConcertPress {
 			<label class="concertpress-label" for="concertpress[date][start]"><?php _e( 'Start date', 'concertpress' ) ?></label>
 				<input type="text" class="concertpress-datepicker" id="concertpress[date][start]" name="concertpress[date][start]" value="<?php echo $date ?>" />
 
+			<?php _e( '@', 'concertpress' ) ?>
+
 			<select class="concertpress-time" id="concertpress[date][time][hour]" name="concertpress[date][time][hour]">
 				<?php $hour = 1; ?>
 				<option value="none"> -- </option>
@@ -371,9 +527,11 @@ class ConcertPress {
 				<?php endwhile; ?>
 			</select>
 
+			<br>
+
 			<label for="concertpress[date][multi]">
 				<input <?php echo $checked ?> class="concertpress-multi-date-trigger" type="checkbox" id="concertpress[date][multi]" name="concertpress[date][multi]">
-				<?php _e( 'This is a multi-date event', 'concertpress' ) ?>
+				&nbsp;<?php _e( 'This is a multi-date event', 'concertpress' ) ?>
 			</label>
 
 			<div class="end-date">
@@ -436,18 +594,11 @@ class ConcertPress {
 		</p>
 		<div class="new new-venue">
 
-
-			<?php if ( ! $venue_id && isset( $venue_errors['name'] ) )
-				echo "<p class='cp-error'>{$venue_errors['name']}</p>"; ?>
-
 			<label for="concertpress[venue][name]"><?php _e( 'Name', 'concertpress' ) ?></label>
 				<input type="text" id="concertpress[venue][name]" name="concertpress[venue][name]" />
 
 			<label for="concertpress[venue][url]"><?php _e( 'URL', 'concertpress' ) ?></label>
 				<input type="url" id="concertpress[venue][url]" name="concertpress[venue][url]" />
-
-			<label for="concertpress[venue][tel]"><?php _e( 'Tel', 'concertpress' ) ?></label>
-				<input type="tel" id="concertpress[venue][tel]" name="concertpress[venue][tel]" />
 
 			<label for="concertpress[venue][address]"><?php _e( 'Address', 'concertpress' ) ?></label>
 				<input type="text" id="concertpress[venue][address]" name="concertpress[venue][address]" />
@@ -456,8 +607,32 @@ class ConcertPress {
 
 		</div>
 
-	<?php
+		<?php
 	}
+
+
+	function print_venue_meta() {
+		global $post;
+
+		$url     = get_post_meta( $post->ID, '_url', true );
+		$address = get_post_meta( $post->ID, '_address', true );
+		?>
+		<div class="new new-venue">
+
+			<label for="concertpress[venue][name]"><?php _e( 'Name', 'concertpress' ) ?></label>
+				<input type="text" id="concertpress[venue][name]" name="concertpress[venue][name]" value="<?php echo esc_attr( get_the_title() ) ?>" />
+
+			<label for="concertpress[venue][url]"><?php _e( 'URL', 'concertpress' ) ?></label>
+				<input type="url" id="concertpress[venue][url]" name="concertpress[venue][url]" value="<?php echo esc_attr( $url ) ?>" />
+
+			<label for="concertpress[venue][address]"><?php _e( 'Address', 'concertpress' ) ?></label>
+				<input type="text" id="concertpress[venue][address]" name="concertpress[venue][address]" value="<?php echo esc_attr( $address ) ?>"  />
+
+		</div>
+
+		<?php
+	}
+
 
 
 	function save_event_meta( $post_id, $post ) {
@@ -474,136 +649,138 @@ class ConcertPress {
 		if ( ! current_user_can( 'edit_post', $post_id ) )
 			return $post_id;
 
-		if ( 'event' != $post->post_type )
-			return $post_id;
-
 		if ( ! isset( $_REQUEST['concertpress'] ) )
 			return $post_id;
 
-		// unhook this function so it doesn't loop infinitely
-		remove_action( 'save_post', array( $this, 'save_event_meta' ) );
+		switch ( $post->post_type ) {
 
-		$cp        = $_REQUEST['concertpress'];
-		$date      = $cp['date'];
-		$programme = $cp['programme'];
-		$venue     = $cp['venue'];
-		$errors    = array();
+			case 'event' :
 
-		error_log( print_r( $cp, 1 ) );
+				// unhook this function so it doesn't loop infinitely
+				remove_action( 'save_post', array( $this, 'save_event_meta' ) );
 
-		if ( '' == $date['start'] ) {
+				$cp        = $_REQUEST['concertpress'];
+				$date      = $cp['date'];
+				$programme = $cp['programme'];
+				$venue     = $cp['venue'];
+				$errors    = array();
 
-			$errors[] = __( 'Please add a date for the event', 'concertpress' );
+				if ( '' == $date['start'] ) {
 
-		} else {
-
-			$hour = ( isset( $date['time']['hour'] ) ) ? $date['time']['hour'] : 0;
-			$min  = ( isset( $date['time']['min'] ) )  ? $date['time']['min']  : 0;
-
-			list( $year, $month, $day ) = explode( '-', $date['start'] );
-			$start_timestamp = mktime( $hour, $min, 0, $month, $day, $year );
-
-			update_post_meta( $post->ID, '_start_date', $start_timestamp );
-
-			if ( isset( $date['multi'] ) ) {
-
-				if ( '' == $date['end'] ) {
-
-					if ( get_post_meta( $post->ID, '_end_date', true ) )
-						delete_post_meta( $post_id, '_end_date' );
+					$errors[] = __( 'Please add a date for the event', 'concertpress' );
+					update_post_meta( $post->ID, '_start_date', strtotime( date( 'Y-m-d' ) ) );
 
 				} else {
 
-					list( $year, $month, $day ) = explode( '-', $date['end'] );
-					$end_timestamp = mktime( 0, 0, 0, $month, $day, $year );
+					$hour = ( isset( $date['time']['hour'] ) ) ? $date['time']['hour'] : 0;
+					$min  = ( isset( $date['time']['min'] ) )  ? $date['time']['min']  : 0;
 
-					if ( $end_timestamp < $start_timestamp ) {
-						$errors[] = __( 'The end date should be later than the start date', 'concertpress' );
-						delete_post_meta( $post_id, '_end_date' );
+					list( $year, $month, $day ) = explode( '-', $date['start'] );
+					$start_timestamp = mktime( $hour, $min, 0, $month, $day, $year );
+
+					update_post_meta( $post->ID, '_start_date', $start_timestamp );
+
+					if ( isset( $date['multi'] ) ) {
+
+						if ( '' == $date['end'] ) {
+
+							if ( get_post_meta( $post->ID, '_end_date', true ) )
+								delete_post_meta( $post_id, '_end_date' );
+
+						} else {
+
+							list( $year, $month, $day ) = explode( '-', $date['end'] );
+							$end_timestamp = mktime( 0, 0, 0, $month, $day, $year );
+
+							if ( $end_timestamp < $start_timestamp ) {
+								$errors[] = __( 'The end date should be later than the start date', 'concertpress' );
+								delete_post_meta( $post_id, '_end_date' );
+							} else {
+								update_post_meta( $post->ID, '_end_date', $end_timestamp );
+							}
+
+						}
+
 					} else {
-						update_post_meta( $post->ID, '_end_date', $end_timestamp );
+
+						if ( get_post_meta( $post->ID, '_end_date', true ) )
+							delete_post_meta( $post_id, '_end_date' );
+
 					}
 
 				}
 
-			} else {
 
-				if ( get_post_meta( $post->ID, '_end_date', true ) )
-					delete_post_meta( $post_id, '_end_date' );
+				if ( $programme['select_id'] != 0 ) {
 
-			}
+					update_post_meta( $post_id, '_programme', $programme['select_id'] );
+
+				} else {
+
+					if ( '' == $programme['content'] || '' == $programme['title'] ) {
+
+						if ( '' == $programme['content'] )
+							$errors[] = __( 'Please add a programme', 'concertpress' );
+						if ( '' == $programme['title'] )
+							$errors[] = __( 'Please add a programme title', 'concertpress' );
+
+					} else {
+
+						$new_programme = array(
+							'post_content' => $programme['content'],
+							'post_title'   => $programme['title'],
+							'post_status'  => 'publish',
+							'post_type'    => 'programme',
+						);
+
+						$new_programme_id = wp_insert_post( $new_programme );
+						add_post_meta( $post_id, '_programme', $new_programme_id );
+
+					}
+				}
+
+
+				if ( $venue['select_id'] != 0 ) {
+
+					update_post_meta( $post_id, '_venue', $venue['select_id'] );
+
+				} else {
+
+					if ( empty( $venue['name'] ) ) {
+
+						$errors[] = __( 'Please add a venue', 'concertpress' );
+
+					} else {
+
+						$new_venue = array(
+							'post_content' => '',
+							'post_title'   => $venue['name'],
+							'post_status'  => 'publish',
+							'post_type'    => 'venue',
+						);
+
+						$new_venue_id = wp_insert_post( $new_venue );
+						add_post_meta( $post_id, '_venue', $new_venue_id );
+						add_post_meta( $new_venue_id, '_url', esc_url_raw( $venue['url'] ) );
+						add_post_meta( $new_venue_id, '_address', sanitize_text_field( $venue['address'] ) );
+
+					}
+
+				}
+
+
+				if ( empty( $errors ) ) {
+					if ( get_post_meta( $post->ID, '_errors', true ) )
+						delete_post_meta( $post->ID, '_errors' );
+				} else {
+					update_post_meta( $post->ID, '_errors', $errors );
+				}
+
+				add_action( 'save_post', array( $this, 'save_event_meta' ) );
+
+				break;
 
 		}
-
-
-		if ( $programme['select_id'] != 0 ) {
-
-			update_post_meta( $post_id, '_programme', $programme['select_id'] );
-
-		} else {
-
-			if ( '' == $programme['content'] || '' == $programme['title'] ) {
-
-				if ( '' == $programme['content'] )
-					$errors[] = __( 'Please add a programme', 'concertpress' );
-				if ( '' == $programme['title'] )
-					$errors[] = __( 'Please add a programme title', 'concertpress' );
-
-			} else {
-
-				$new_programme = array(
-					'post_content' => $programme['content'],
-					'post_title'   => $programme['title'],
-					'post_status'  => 'publish',
-					'post_type'    => 'programme',
-				);
-
-				$new_programme_id = wp_insert_post( $new_programme );
-				add_post_meta( $post_id, '_programme', $new_programme_id );
-
-			}
-		}
-
-
-		if ( $venue['select_id'] != 0 ) {
-
-			update_post_meta( $post_id, '_venue', $venue['select_id'] );
-
-		} else {
-
-			if ( empty( $venue['name'] ) ) {
-
-				$errors[] = __( 'Please add a venue', 'concertpress' );
-
-			} else {
-
-				$new_venue = array(
-					'post_content' => '',
-					'post_title'   => $venue['name'],
-					'post_status'  => 'publish',
-					'post_type'    => 'venue',
-				);
-
-				$new_venue_id = wp_insert_post( $new_venue );
-				add_post_meta( $post_id, '_venue', $new_venue_id );
-				add_post_meta( $new_venue_id, '_url', esc_url_raw( $venue['url'] ) );
-				add_post_meta( $new_venue_id, '_address', sanitize_text_field( $venue['address'] ) );
-
-			}
-
-		}
-
-
-		if ( empty( $errors ) ) {
-			if ( get_post_meta( $post->ID, '_errors', true ) )
-				delete_post_meta( $post->ID, '_errors' );
-		} else {
-			update_post_meta( $post->ID, '_errors', $errors );
-		}
-
-		error_log( print_r( $errors, 1 ) );
-
-		add_action( 'save_post', array( $this, 'save_event_meta' ) );
 
 	}
 
