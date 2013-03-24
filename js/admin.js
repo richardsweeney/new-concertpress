@@ -9,7 +9,8 @@ jQuery( function ( $ ) {
         $endDate            = $( '.end-date' ),
         $hourMin            = $( '.concertpress-time')
 
-    $new.hide()
+    if ( 'event' === pagenow )
+        $new.hide()
 
     if ( !$multiDateTrigger.is( ':checked' ) )
         $endDate.hide()
@@ -33,6 +34,7 @@ jQuery( function ( $ ) {
 
     $.each( $( '.concertpress-datepicker' ), function () {
         $( this ).datepicker({
+            regional  : [ cp.language ],
             dateFormat: 'yy-mm-dd',
             firstDay  : 1
         })
