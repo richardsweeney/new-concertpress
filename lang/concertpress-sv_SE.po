@@ -1,0 +1,241 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: ConcertPress v2.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: \n"
+"PO-Revision-Date: 2013-03-28 07:28:59+0000\n"
+"Last-Translator: admin <richard.sweeney@orestad-linux.se>\n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=n != 1;\n"
+"X-Generator: CSL v1.x\n"
+"X-Poedit-Language: Swedish\n"
+"X-Poedit-Country: SWEDEN\n"
+"X-Poedit-SourceCharset: utf-8\n"
+"X-Poedit-KeywordsList: __;_e;__ngettext:1,2;_n:1,2;__ngettext_noop:1,2;_n_noop:1,2;_c,_nc:4c,1,2;_x:1,2c;_ex:1,2c;_nx:4c,1,2;_nx_noop:4c,1,2;\n"
+"X-Poedit-Basepath: ../\n"
+"X-Poedit-Bookmarks: \n"
+"X-Poedit-SearchPath-0: .\n"
+"X-Textdomain-Support: yes"
+
+#: concertpress.php:227
+#@ concertpress
+msgid "event"
+msgstr ""
+
+#: concertpress.php:228
+#@ concertpress
+msgid "events"
+msgstr ""
+
+#: concertpress.php:236
+#@ concertpress
+msgid "programme"
+msgstr ""
+
+#: concertpress.php:237
+#@ concertpress
+msgid "programmes"
+msgstr ""
+
+#: concertpress.php:245
+#@ concertpress
+msgid "venue"
+msgstr ""
+
+#: concertpress.php:246
+#@ concertpress
+msgid "venues"
+msgstr ""
+
+#: concertpress.php:274
+#@ concertpress
+msgid "singular_name"
+msgstr ""
+
+#: concertpress.php:275
+#: concertpress.php:276
+#, php-format
+#@ concertpress
+msgid "Add new %s"
+msgstr ""
+
+#: concertpress.php:277
+#, php-format
+#@ concertpress
+msgid "Edit %s"
+msgstr ""
+
+#: concertpress.php:278
+#, php-format
+#@ concertpress
+msgid "New %s"
+msgstr ""
+
+#: concertpress.php:279
+#, php-format
+#@ concertpress
+msgid "View %s"
+msgstr ""
+
+#: concertpress.php:280
+#, php-format
+#@ concertpress
+msgid "Search %s"
+msgstr ""
+
+#: concertpress.php:281
+#, php-format
+#@ concertpress
+msgid "No %s found"
+msgstr ""
+
+#: concertpress.php:282
+#, php-format
+#@ concertpress
+msgid "No %s found in the trash!"
+msgstr ""
+
+#: concertpress.php:283
+#@ concertpress
+msgid "plural_name"
+msgstr ""
+
+#: concertpress.php:297
+#@ concertpress
+msgid "Venue name"
+msgstr ""
+
+#: concertpress.php:301
+#: concertpress.php:574
+#@ concertpress
+msgid "Programme title"
+msgstr ""
+
+#: concertpress.php:305
+#@ concertpress
+msgid "Event title"
+msgstr ""
+
+#: concertpress.php:349
+#: concertpress.php:432
+#@ concertpress
+#@ ibmetall
+msgid "Programme"
+msgstr ""
+
+#: concertpress.php:350
+#: concertpress.php:440
+#@ concertpress
+#@ ibmetall
+msgid "Venue"
+msgstr ""
+
+#: concertpress.php:351
+#@ concertpress
+msgid "Event Date"
+msgstr ""
+
+#: concertpress.php:352
+#: concertpress.php:424
+#@ default
+#@ ibmetall
+msgid "Date"
+msgstr ""
+
+#: concertpress.php:451
+#@ ibmetall
+msgid "Venue Details"
+msgstr ""
+
+#: concertpress.php:471
+#, php-format
+#@ concertpress
+msgid "Select a %s"
+msgstr ""
+
+#: concertpress.php:473
+#@ concertpress
+msgid "-- select --"
+msgstr ""
+
+#: concertpress.php:507
+#@ concertpress
+msgid "Start date"
+msgstr ""
+
+#: concertpress.php:510
+#@ concertpress
+msgid "@"
+msgstr ""
+
+#: concertpress.php:538
+#@ concertpress
+msgid "This is a multi-date event"
+msgstr ""
+
+#: concertpress.php:543
+#@ concertpress
+msgid "End date"
+msgstr ""
+
+#: concertpress.php:567
+#@ concertpress
+msgid "Add a new programme"
+msgstr ""
+
+#: concertpress.php:580
+#@ concertpress
+msgid "Programme details"
+msgstr ""
+
+#: concertpress.php:597
+#@ concertpress
+msgid "Add a new venue"
+msgstr ""
+
+#: concertpress.php:601
+#: concertpress.php:626
+#@ concertpress
+msgid "Name"
+msgstr ""
+
+#: concertpress.php:604
+#: concertpress.php:629
+#@ concertpress
+msgid "URL"
+msgstr ""
+
+#: concertpress.php:607
+#: concertpress.php:632
+#@ concertpress
+msgid "Address"
+msgstr ""
+
+#: concertpress.php:674
+#@ concertpress
+msgid "Please add a date for the event"
+msgstr ""
+
+#: concertpress.php:700
+#@ concertpress
+msgid "The end date should be later than the start date"
+msgstr ""
+
+#: concertpress.php:727
+#@ concertpress
+msgid "Please add a programme"
+msgstr ""
+
+#: concertpress.php:729
+#@ concertpress
+msgid "Please add a programme title"
+msgstr ""
+
+#: concertpress.php:755
+#@ concertpress
+msgid "Please add a venue"
+msgstr ""
+
