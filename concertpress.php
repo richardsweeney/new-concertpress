@@ -36,6 +36,8 @@ License:
 // TODO: rename this class to a proper name for your plugin
 class ConcertPress {
 
+	private $current_post;
+
 	/*--------------------------------------------*
 	 * Constructor
 	 *--------------------------------------------*/
@@ -487,30 +489,34 @@ class ConcertPress {
 
 
 
-	private function print_select_lists( $type = 'programme' ) {
-		global $wpdb, $post;
-		$value = get_post_meta( $post->ID, "_$type", true );
-		$sql = "SELECT ID, post_title AS title FROM $wpdb->posts WHERE post_type = '%s' AND post_status = 'publish'";
-		$items = $wpdb->get_results( $wpdb->prepare( $sql, $type ) );
-		if ( !$items )
-			return false;
+	/** Helper function to print select lists of venues & programmes */
+	private function _print_select_lists( $type = 'programme' ) {
+		$args = array(
+			'post_type'      => $type,
+			'posts_per_page' => -1,
+		);
+		$things = new WP_Query( $args );
+		$value  = get_post_meta( $this->current_post, "_$type", true );
+		$name   = "concertpress[$type][select_id]";
 
-		$name = "concertpress[$type][select_id]";
-		?>
-		<label class="concertpress-label" for="<?php echo $name ?>"><?php printf( __( 'Select a %s', 'concertpress' ), $type ) ?></label>
-			<select class="concertpress-select" name="<?php echo $name ?>" id="<?php echo $name ?>">
-				<option value="0"><?php _e( '-- select --', 'concertpress' ); ?></option>
-				<?php foreach ( $items as $item ) : ?>
-					<option value="<?php esc_attr_e( $item->ID ) ?>" <?php selected( $value, $item->ID ) ?>><?php echo $item->title ?></option>
-				<?php endforeach ?>
-			</select>
-	<?php
+		if ( $things->have_posts() ) : ?>
+			<label class="concertpress-label" for="<?php $name ?>"><?php printf( __( 'Select a %s', 'concertpress' ), $type ) ?></label>
+				<select class="concertpress-select" name="<?php echo $name ?>" id="<?php echo $name ?>">
+					<option value="0"><?php _e( '-- select --', 'concertpress' ); ?></option>
+						<?php while( $things->have_posts() ) : ?>
+							<?php $things->the_post(); ?>
+							<option value="<?php esc_attr( the_ID() ) ?>" <?php selected( $value, get_the_ID() ) ?>><?php the_title() ?></option>
+						<?php endwhile; ?>
+					</select>
+		<?php endif; wp_reset_query();
 	}
 
 
+	/** Add event date meta box */
 	function print_event_date_meta() {
 		global $post;
-		// Use nonce for verification
+		$this->current_post = $post->ID;
+
 		wp_nonce_field( 'concertpress_nonce', 'concertpress_add_event' );
 
 		$saved_hour = $saved_min = $date = $end_date = false;
@@ -579,12 +585,9 @@ class ConcertPress {
 	}
 
 
-	/** Add meta boxes to events */
+	/** Add event programme meta box */
 	function print_event_programme_meta() {
-		global $post;
-
-		$programme_id = get_post_meta( $post->ID, '_programme', true );
-		$this->print_select_lists();
+		$this->_print_select_lists();
 
 		$editor_settings = array(
 			'teeny'         => true,
@@ -592,39 +595,36 @@ class ConcertPress {
 			'textarea_name' => 'concertpress[programme][content]',
 		);
 		?>
+
 		<p class="new-trigger">
 			<a href="#" class="button button-secondary"><?php _e( 'Add a new programme', 'concertpress' ) ?></a>
 		</p>
-		<div class="new new-programme">
 
-			<?php if ( ! $programme_id && isset( $programme_errors['title'] ) )
-				echo "<p class='cp-error'>{$programme_errors['title']}</p>"; ?>
+		<div class="new new-programme">
 
 			<label for="concertpress[programme][title]"><?php _e( 'Programme title', 'concertpress' ) ?></label>
 				<input type="text" name="concertpress[programme][title]" id="concertpress[programme][title]" />
 
-		<?php if ( ! $programme_id && isset( $programme_errors['content'] ) )
-			echo "<p class='cp-error'>{$programme_errors['content']}</p>"; ?>
-
 			<label for="concertpress[programme][content]"><?php _e( 'Programme details', 'concertpress' ) ?></label>
+			<?php
+				wp_editor( '', 'programme-content', $editor_settings );
+				do_action( 'concertpress_add_programme' );
+			?>
 
-		<?php
-			wp_editor( '', 'programme-content', $editor_settings );
-			do_action( 'concertpress_add_programme' );
-		?>
 		</div>
 		<?php
 	}
 
-	function print_event_venue_meta() {
-		global $post;
 
-		$venue_id = get_post_meta( $post->ID, '_venue', true );
-		$this->print_select_lists( 'venue' );
+	/** Add event venue meta box */
+	function print_event_venue_meta() {
+		$this->_print_select_lists( 'venue' );
 		?>
+
 		<p class="new-trigger">
 			<a href="#" class="button button-secondary"><?php _e( 'Add a new venue', 'concertpress' ) ?></a>
 		</p>
+
 		<div class="new new-venue">
 
 			<label for="concertpress[venue][name]"><?php _e( 'Name', 'concertpress' ) ?></label>
