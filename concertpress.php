@@ -63,6 +63,8 @@ class ConcertPress {
 		add_action( 'init', array( $this, 'create_custom_post_types' ) );
 		add_action( 'save_post', array( $this, 'save_event_meta' ), 10, 2 );
 
+		add_filter( 'wp_insert_post_data', array( $this, 'filter_post_data' ), '99', 2 );
+
 		add_action( 'admin_notices', array( $this, 'admin_notice' ) );
 		add_filter( 'post_updated_messages', array( $this, 'filter_post_messages') );
 
@@ -83,25 +85,12 @@ class ConcertPress {
 		if ( is_admin() )
 			add_filter( 'pre_get_posts', array( $this, 'pre_get_posts_filter' ) );
 
+		// Custom columns for programmes & events
 		add_action( 'manage_programme_posts_custom_column', array( $this, 'manage_programme_custom_column' ), 10, 2 );
 		add_filter( 'manage_edit-programme_columns', array( $this, 'set_custom_edit_programme_venue_columns' ) );
-
 		add_action( 'manage_venue_posts_custom_column', array( $this, 'manage_venue_custom_column' ), 10, 2 );
 		add_filter( 'manage_edit-venue_columns', array( $this, 'set_custom_edit_programme_venue_columns' ) );
 
-		/*
-		 * TODO:
-		 * Define the custom functionality for your plugin. The first parameter of the
-		 * add_action/add_filter calls are the hooks into which your code should fire.
-		 *
-		 * The second parameter is the function name located within this class. See the stubs
-		 * later in the file.
-		 *
-		 * For more information:
-		 * http://codex.wordpress.org/Plugin_API#Hooks.2C_Actions_and_Filters
-		 */
-		add_action( 'TODO', array( $this, 'action_method_name' ) );
-		add_filter( 'TODO', array( $this, 'filter_method_name' ) );
 
 	} // end constructor
 
@@ -207,30 +196,6 @@ class ConcertPress {
 	 * Core Functions
 	 *---------------------------------------------*/
 
-	/**
-	 * NOTE:  Actions are points in the execution of a page or process
-	 *        lifecycle that WordPress fires.
-	 *
-	 *		  WordPress Actions: http://codex.wordpress.org/Plugin_API#Actions
-	 *		  Action Reference:  http://codex.wordpress.org/Plugin_API/Action_Reference
-	 *
-	 */
-	function action_method_name() {
-		// TODO:	Define your action method here
-	} // end action_method_name
-
-	/**
-	 * NOTE:  Filters are points of execution in which WordPress modifies data
-	 *        before saving it or sending it to the browser.
-	 *
-	 *		  WordPress Filters: http://codex.wordpress.org/Plugin_API#Filters
-	 *		  Filter Reference:  http://codex.wordpress.org/Plugin_API/Filter_Reference
-	 *
-	 */
-	function filter_method_name() {
-		// TODO:	Define your filter method here
-	} // end filter_method_name
-
 
 	function create_custom_post_types() {
 
@@ -266,7 +231,7 @@ class ConcertPress {
 		);
 
 		foreach( $cpts as $cpt ) {
-			$this->create_post_type( $cpt );
+			$this->_create_post_type( $cpt );
 		}
 
 	}
@@ -275,27 +240,29 @@ class ConcertPress {
 	/** If there errors in the metaboxes. */
 	function admin_notice() {
 		global $post;
-		if ( isset( $_GET['message'] ) && 'event' == get_current_screen()->id && get_post_meta( $post->ID, '_errors' ) ) :
+		if ( isset( $_GET['message'] ) && in_array( get_current_screen()->id, array( 'event', 'venue' ) ) && get_post_meta( $post->ID, '_errors' ) ) :
 			?>
 			<div class="error">
 				<?php foreach ( get_post_meta ( $post->ID, '_errors', true ) as $errors ) : ?>
 					<p><?php echo $errors; ?></p>
 				<?php endforeach; ?>
 			</div>
-		<?php endif;
+			<?php
+		endif;
 	}
 
 	 function filter_post_messages( $messages ) {
-	 	global $post;
+		global $post;
 
-	 	if ( 'event' == get_current_screen()->id && isset( $_GET['message'] ) )
-	 		// var_dump( $messages );
+		if ( 'event' == get_current_screen()->id && isset( $_GET['message'] ) )
+			// var_dump( $messages );
 
-	 	return $messages;
+		return $messages;
 	 }
 
 
-	private function create_post_type( $args ) {
+	/** Helper function to create post types */
+	private function _create_post_type( $args ) {
 
 		$defaults = array(
 			'hierarchical'         => false,
@@ -718,6 +685,9 @@ class ConcertPress {
 
 		$url     = get_post_meta( $post->ID, '_url', true );
 		$address = get_post_meta( $post->ID, '_address', true );
+
+		wp_nonce_field( 'concertpress_nonce', 'concertpress_add_venue' );
+
 		?>
 		<div class="new new-venue">
 
@@ -889,8 +859,30 @@ class ConcertPress {
 
 				break;
 
+
+			case 'venue' :
+
+				if ( ! check_admin_referer( 'concertpress_nonce', 'concertpress_add_venue' ) )
+					return;
+
+				$venue = $_POST['concertpress']['venue'];
+				update_post_meta( $post_id, '_url', esc_url_raw( $venue['url'] ) );
+				update_post_meta( $post_id, '_address', sanitize_text_field( $venue['address'] ) );
+
+				break;
+
 		}
 
+	}
+
+
+	function filter_post_data( $data, $postarr ) {
+		if ( 'venue' == $data['post_type'] && isset( $_POST['concertpress']['venue']['name'] ) ) {
+			$data['post_title'] = $_POST['concertpress']['venue']['name'];
+			$data['post_name'] = sanitize_title( $_POST['concertpress']['venue']['name'] );
+		}
+
+		return $data;
 	}
 
 
