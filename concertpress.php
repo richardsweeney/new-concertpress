@@ -83,6 +83,12 @@ class ConcertPress {
 		if ( is_admin() )
 			add_filter( 'pre_get_posts', array( $this, 'pre_get_posts_filter' ) );
 
+		add_action( 'manage_programme_posts_custom_column', array( $this, 'manage_programme_custom_column' ), 10, 2 );
+		add_filter( 'manage_edit-programme_columns', array( $this, 'set_custom_edit_programme_venue_columns' ) );
+
+		add_action( 'manage_venue_posts_custom_column', array( $this, 'manage_venue_custom_column' ), 10, 2 );
+		add_filter( 'manage_edit-venue_columns', array( $this, 'set_custom_edit_programme_venue_columns' ) );
+
 		/*
 		 * TODO:
 		 * Define the custom functionality for your plugin. The first parameter of the
@@ -374,19 +380,79 @@ class ConcertPress {
 
 	}
 
+	/** Show the event in the programme columns */
+	function manage_programme_custom_column( $column, $post_id ) {
+		switch( $column ) {
+			case 'event_id' :
+				$this->_get_venue_programme_meta_columns( '_programme', $post_id );
+				break;
+
+		}
+
+	}
+
+	/** Show the event in the venue columns */
+	function manage_venue_custom_column( $column, $post_id ) {
+		switch( $column ) {
+			case 'event_id' :
+				$this->_get_venue_programme_meta_columns( '_venue', $post_id );
+				break;
+
+		}
+
+	}
 
 
+	/** Helper function to retrieve the associated event for programmes & venues */
+	private function _get_venue_programme_meta_columns( $meta_key, $post_id ) {
+		$args = array(
+			'post_type'      => 'event',
+			'posts_per_page' => -1,
+			'meta_query' => array(
+				array(
+					'key'     => $meta_key,
+					'value'   => (int) $post_id,
+					'compare' => '=',
+				),
+			),
+		);
+		$events = new WP_Query( $args );
+		if ( $events->have_posts() ) {
+			$i = 1;
+			while ( $events->have_posts() ) {
+				$events->the_post();
+				echo '<a href="' . get_permalink() . '">' . get_the_title() . '</a>';
+				if ( $i != $events->found_posts )
+					echo ', ';
+
+				$i++;
+			}
+		} else {
+			echo '--';
+		}
+	}
+
+
+
+	/** Register the additional columns for events, programmes & venues */
 	function set_custom_edit_event_columns( $columns ) {
 		unset( $columns['date'] );
 		$columns['programme'] = __( 'Programme', 'concertpress' );
 		$columns['venue']     = __( 'Venue', 'concertpress' );
 		$columns['cp-date']   = __( 'Event Date', 'concertpress' );
-		$columns['date']	  = __( 'Date' );
+		$columns['date']	  = __( 'Date Created', 'concertpress' );
+		return $columns;
+	}
+
+	function set_custom_edit_programme_venue_columns( $columns ) {
+		unset( $columns['date'] );
+		$columns['event_id'] = __( 'Associated Event(s)', 'concertpress' );
+		$columns['date']	 = __( 'Date Created', 'concertpress' );
 		return $columns;
 	}
 
 
-
+	/** Make the event date coloumn sortable */
 	function event_column_register_sortable( $columns ) {
 		$columns['cp-date'] = 'cp-date';
 		unset( $columns['date'] );
