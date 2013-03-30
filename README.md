@@ -1,6 +1,6 @@
 # ConcertPress
 
-ConcertPress is an events managements plugin written specifically for classical musicians.
+ConcertPress is a WordPress events managements plugin written specifically for classical musicians.
 
 ## Features
 
