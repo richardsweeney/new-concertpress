@@ -328,6 +328,8 @@ class ConcertPress {
 
 	}
 
+
+	/** Change 'enter text here' to something more appropriate */
 	function custom_enter_title_here( $text ) {
 		switch ( get_current_screen()->id ) {
 
@@ -348,7 +350,7 @@ class ConcertPress {
 	}
 
 
-
+	/** Show the programme, venue and date in the event columns */
 	function manage_event_custom_column( $column, $post_id ) {
 		switch ( $column ) {
 
@@ -461,7 +463,7 @@ class ConcertPress {
 	}
 
 
-
+	/** Add a filter to order by event date */
 	function event_column_orderby( $vars ) {
 
 		if ( ! isset( $vars['orderby'] ) )
@@ -478,7 +480,7 @@ class ConcertPress {
 	}
 
 
-
+	/** Add a filter to initially display events by their date */
 	function pre_get_posts_filter( $query ) {
 
 		if ( ! isset( $query->query_vars['post_type'] ) )
@@ -496,14 +498,12 @@ class ConcertPress {
 
 				break;
 
-			default :
-				break;
-
 		}
 		return $query;
 	}
 
 
+	/** Add a class name to the edit screens for JS + CSS stuff */
 	function body_class_names( $classes ) {
 		global $post;
 		if ( isset( $post->post_type ) && in_array( $post->post_type, array( 'event', 'programme', 'venue' ) ) )
@@ -514,11 +514,11 @@ class ConcertPress {
 
 
 
-	/** Register meta boxes */
+	/** Register meta boxes for events */
 	function register_event_meta_boxes() {
 		add_meta_box(
 			'convertpress-event-date-meta',
-			__( 'Date', 'ibmetall' ),
+			__( 'Date', 'concertpress' ),
 			array( $this, 'print_event_date_meta' ),
 			'event',
 			'side',
@@ -526,7 +526,7 @@ class ConcertPress {
 		);
 		add_meta_box(
 			'convertpress-event-programme-meta',
-			__( 'Programme', 'ibmetall' ),
+			__( 'Programme', 'concertpress' ),
 			array( $this, 'print_event_programme_meta' ),
 			'event',
 			'normal',
@@ -534,7 +534,7 @@ class ConcertPress {
 		);
 		add_meta_box(
 			'convertpress-event-venue-meta',
-			__( 'Venue', 'ibmetall' ),
+			__( 'Venue', 'concertpress' ),
 			array( $this, 'print_event_venue_meta' ),
 			'event',
 			'normal',
@@ -542,10 +542,12 @@ class ConcertPress {
 		);
 	}
 
+
+	/** Register meta boxes for venues */
 	function register_venue_meta_boxes() {
 		add_meta_box(
 			'convertpress-venue-meta',
-			__( 'Venue Details', 'ibmetall' ),
+			__( 'Venue Details', 'concertpress' ),
 			array( $this, 'print_venue_meta' ),
 			'venue',
 			'normal',
@@ -608,7 +610,7 @@ class ConcertPress {
 			<label class="concertpress-label" for="concertpress[date][start]"><?php _e( 'Start date', 'concertpress' ) ?></label>
 				<input type="text" class="start-date concertpress-datepicker" id="concertpress[date][start]" name="concertpress[date][start]" value="<?php echo $date ?>" />
 
-			<?php _e( '@', 'concertpress' ) ?>
+			<?php _ex( '@', 'Date and time separator', 'concertpress' ) ?>
 
 			<select class="concertpress-time" id="concertpress[date][time][hour]" name="concertpress[date][time][hour]">
 				<?php $hour = 0; ?>
@@ -710,6 +712,7 @@ class ConcertPress {
 	}
 
 
+	/** Add venue meta box */
 	function print_venue_meta() {
 		global $post;
 
@@ -733,7 +736,7 @@ class ConcertPress {
 	}
 
 
-
+	/** Save the extra meta for events + venues */
 	function save_event_meta( $post_id, $post ) {
 
 		if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE )
