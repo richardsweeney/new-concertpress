@@ -755,6 +755,10 @@ class ConcertPress {
 
 			case 'event' :
 
+
+				// Remove the save post hook to avoid an infinite loop
+				remove_action( 'save_post', array( $this, 'save_event_meta' ) );
+
 				if ( ! check_admin_referer( 'concertpress_nonce', 'concertpress_add_event' ) )
 					return;
 
@@ -763,7 +767,6 @@ class ConcertPress {
 				$programme = $cp['programme'];
 				$venue     = $cp['venue'];
 				$errors    = array();
-
 
 
 				/** Date */
@@ -837,7 +840,7 @@ class ConcertPress {
 						);
 
 						$new_programme_id = wp_insert_post( $new_programme );
-						add_post_meta( $post_id, '_programme', $new_programme_id );
+						update_post_meta( $post_id, '_programme', $new_programme_id );
 
 					}
 				}
@@ -865,9 +868,9 @@ class ConcertPress {
 						);
 
 						$new_venue_id = wp_insert_post( $new_venue );
-						add_post_meta( $post_id, '_venue', $new_venue_id );
-						add_post_meta( $new_venue_id, '_url', esc_url_raw( $venue['url'] ) );
-						add_post_meta( $new_venue_id, '_address', sanitize_text_field( $venue['address'] ) );
+						update_post_meta( $post_id, '_venue', $new_venue_id );
+						update_post_meta( $new_venue_id, '_url', esc_url_raw( $venue['url'] ) );
+						update_post_meta( $new_venue_id, '_address', sanitize_text_field( $venue['address'] ) );
 
 					}
 
@@ -881,6 +884,7 @@ class ConcertPress {
 					update_post_meta( $post->ID, '_errors', $errors );
 				}
 
+				// Reattach the save post hook
 				add_action( 'save_post', array( $this, 'save_event_meta' ) );
 
 				break;
