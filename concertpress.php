@@ -1,13 +1,6 @@
 <?php
 /*
 
-Programme: name, content
-Venue    : name, address, url, tel
-
-
-
-
-
 Plugin Name: ConcertPress
 Plugin URI: TODO
 Description: An events management plugin specifically for classical musicians
@@ -33,21 +26,15 @@ License:
 
 */
 
-// TODO: rename this class to a proper name for your plugin
 class ConcertPress {
 
 	private $current_post;
 
-	/*--------------------------------------------*
-	 * Constructor
-	 *--------------------------------------------*/
 
-	/**
-	 * Initializes the plugin by setting localization, filters, and administration functions.
-	 */
 	function __construct() {
 
-		define( 'CP_PLUGIN_VERSION', '2.0' );
+		define( 'CONCERTPRESS_VERSION', '2.0' );
+		define( 'CONCERTPRESS_PATH', plugin_dir_path( __FILE__ ) );
 
 		// Load plugin text domain
 		add_action( 'init', array( $this, 'plugin_textdomain' ) );
@@ -60,18 +47,21 @@ class ConcertPress {
 		add_action( 'wp_enqueue_scripts', array( $this, 'register_plugin_styles' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'register_plugin_scripts' ) );
 
+		// Create the required post types
 		add_action( 'init', array( $this, 'create_custom_post_types' ) );
-		add_action( 'save_post', array( $this, 'save_event_meta' ), 10, 2 );
 
+		// Save the extra post meta
+		add_action( 'save_post', array( $this, 'save_event_meta' ), 10, 2 );
 		add_filter( 'wp_insert_post_data', array( $this, 'filter_post_data' ), '99', 2 );
 
+		// Additional messages on saving a post
 		add_action( 'admin_notices', array( $this, 'admin_notice' ) );
 		add_filter( 'post_updated_messages', array( $this, 'filter_post_messages') );
 
 		// Register hooks that are fired when the plugin is activated, deactivated, and uninstalled, respectively.
 		register_activation_hook( __FILE__, array( $this, 'activate' ) );
 		register_deactivation_hook( __FILE__, array( $this, 'deactivate' ) );
-		register_uninstall_hook( __FILE__, 'ConcertPress::uninstall' );
+		register_uninstall_hook( __FILE__, 'self::uninstall' );
 
 		// Diverse text changes
 		add_filter( 'enter_title_here', array( $this, 'custom_enter_title_here' ) );
@@ -90,6 +80,13 @@ class ConcertPress {
 		add_filter( 'manage_edit-programme_columns', array( $this, 'set_custom_edit_programme_venue_columns' ) );
 		add_action( 'manage_venue_posts_custom_column', array( $this, 'manage_venue_custom_column' ), 10, 2 );
 		add_filter( 'manage_edit-venue_columns', array( $this, 'set_custom_edit_programme_venue_columns' ) );
+
+		// Add options page
+		add_action( 'admin_menu', array( $this, 'add_options_page' ) );
+		add_action( 'admin_init', array( $this, 'admin_init_hook' ) );
+
+		// Show a specific template for single events
+		add_filter( 'the_content', array( $this, 'include_event_template' ) );
 
 
 	} // end constructor
@@ -124,11 +121,21 @@ class ConcertPress {
 	 * Loads the plugin text domain for translation
 	 */
 	function plugin_textdomain() {
-
 		$domain = 'concertpress';
 		load_plugin_textdomain( $domain, FALSE, dirname( plugin_basename( __FILE__ ) ) . '/lang/' );
+		if ( false === get_option( 'concertpress_version' ) ) {
+			add_option( 'concertpress_version', CONCERTPRESS_VERSION );
+			$this->_update_old_table_structure();
+		}
 
 	} // end plugin_textdomain
+
+
+	/** TO DO: Convert all the old tables to nice WP structure! */
+	function _update_old_table_structure() {
+
+	}
+
 
 	/**
 	 * Registers and enqueues admin-specific styles.
@@ -158,7 +165,7 @@ class ConcertPress {
 			wp_enqueue_script( 'jquery' );
 			wp_enqueue_script( 'jquery-ui-core' );
 			wp_enqueue_script( 'jquery-ui-datepicker' );
-			wp_enqueue_script( 'concertpress-js', plugins_url( 'concertpress/js/admin.js' ), array( 'jquery' ), CP_PLUGIN_VERSION, true );
+			wp_enqueue_script( 'concertpress-js', plugins_url( 'concertpress/js/admin.js' ), array( 'jquery' ), CONCERTPRESS_VERSION, true );
 		}
 		$i18n = array(
 			'date_format'     => get_option( 'date_format' ),
@@ -206,7 +213,7 @@ class ConcertPress {
 				'plural_name'          => __( 'Events', 'concertpress' ),
 				'slug'                 => 'event',
 				'menu_position'        => 30,
-				'supports'             => array( 'title', 'thumbnail' ),
+				'supports'             => array( 'title', 'editor', 'thumbnail' ),
 				'register_meta_box_cb' => array( $this, 'register_event_meta_boxes' ),
 			),
 			array(
@@ -886,8 +893,153 @@ class ConcertPress {
 	}
 
 
+	static function get_events( $args = array() ) {
+		$defaults = array(
+			'post_type'  => 'event',
+			'meta_key'   => '_start_date',
+			'orderby'    => 'meta_value_num',
+			'order'      => 'asc',
+			'meta_query' => array(
+				array(
+					'key'     => '_start_date',
+					'value'   => time(),
+					'compare' => '>=',
+				),
+			),
+		);
+		$args = wp_parse_args( $args, $defaults );
+		return new WP_Query( $args );
+	}
+
+	public function do_shortcode() {
+		$events = self::get_events();
+		if ( $events->have_posts() ) : ?>
+			<ul class="concertpress-events-list">
+				<?php
+					while ( $events->have_posts() ) :
+						$events->the_post();
+						$date = get_post_meta( get_the_ID(), '_start_date', true );
+						$pid  = get_post_meta( get_the_ID(), '_programme', true );
+						$vid  = get_post_meta( get_the_ID(), '_venue', true );
+					?>
+					<li>
+						<h3><a href="<?php the_permalink(); ?>"><?php the_title(); ?></a></h3>
+						<time datetime="<?php echo date( 'Y-m-d', $date ); ?>"><?php echo date( get_option( 'date_format' ), $date ); ?></time>
+						<p><?php _e( 'Programme:', 'concertpress' ); ?> <?php echo get_the_title( $pid ); ?></p>
+						<p><?php _e( 'Venue:', 'concertpress' ); ?> <?php echo get_the_title( $vid ); ?> </p>
+					</li>
+				<?php endwhile; ?>
+			</ul>
+		<?php endif; wp_reset_query();
+	}
+
+
+
+	/** Add an options page */
+	function add_options_page() {
+		add_submenu_page( 'edit.php?post_type=event', __( 'ConcertPress options', 'concertpress' ), __( 'Options', 'concertpress' ), 'manage_options', 'concertpress_options', array( $this, 'options_page' ) );
+	}
+
+	function options_page() {
+		?>
+	    <div class="wrap">
+	        <div id="icon-themes" class="icon32"></div>
+	        <h2><?php _e( 'Olab RSS Feed options', 'concertpress' ); ?></h2>
+	        <form action="options.php" method="POST">
+	            <?php settings_fields( 'concertpress-settings-group' ); ?>
+	            <?php do_settings_sections( 'concertpress-options-page' ); ?>
+	            <?php submit_button(); ?>
+	        </form>
+	    </div>
+	    <?php
+	}
+
+	function admin_init_hook() {
+	    register_setting( 'concertpress-settings-group', 'concertpress_settings' /*, array( $this, 'concertpress_sanitize_settings' )*/ );
+	    add_settings_section( 'section-one', __( 'ConcertPress settings', 'concertpress' ), array( $this, 'section_one_callback' ), 'concertpress-options-page' );
+	    add_settings_field( 'field-one', __( 'Select a page for upcoming events', 'concertpress' ), array( $this, 'field_one_callback' ), 'concertpress-options-page', 'section-one' );
+	    add_settings_field( 'field-two', __( 'Select a page for past events', 'concertpress' ), array( $this, 'field_two_callback' ), 'concertpress-options-page', 'section-one' );
+	}
+
+	function section_one_callback() {
+	    // _e( 'Enter feed settings here', 'concertpress' );
+	}
+
+
+	function field_one_callback() {
+	    $pid = isset( $settings['upcoming'] ) ? esc_attr( $settings['upcoming'] ) : '';
+	    $settings = get_option( 'concertpress_settings' );
+	    $args = array(
+	    	'post_type' => 'page',
+	    );
+	    $pages = new WP_Query( $args );
+	    ?>
+	    <select name="concertpress_settings[upcoming]" id="concertpress_settings[upcoming]">
+	    	<option> -- <?php _e( 'Select', 'concertpress' ) ?> -- </option>
+	    	<?php foreach ( $pages->posts as $page ) : ?>
+	    		<option <?php selected( $pid, $page->ID ) ?> value="<?php echo $page->ID ?>"><?php echo $page->post_title ?></option>
+	    	<?php endforeach; ?>
+	    </select>
+	    <?php
+	}
+
+	function field_two_callback() {
+	    $settings = get_option( 'concertpress_settings' );
+	    $num = isset( $settings['limit'] ) ? (int) $settings['limit'] : 3;
+	    ?>
+	    <select id="concertpress_settings[limit]" name="concertpress_settings[limit]">
+	        <?php for ( $i = 1; $i <= 10; $i++ ) : ?>
+	            <option <?php selected( $num, $i ); ?> value="<?php echo $i; ?>"><?php echo $i; ?></option>
+	        <?php endfor; ?>
+	    </select>
+	    <?php
+	}
+
+
+	function include_event_template( $content ) {
+		global $wp_query, $post;
+
+		if ( ! isset( $wp_query->query_vars['post_type'] ) && 'event' != $wp_query->query_vars['post_type'] && ! is_single() )
+			return $content;
+
+		$date          = get_post_meta( $post->ID, '_start_date', true );
+		$pid           = get_post_meta( $post->ID, '_programme', true );
+		$programme     = get_post( $pid );
+		$vid           = get_post_meta( $post->ID, '_venue', true );
+		$venue         = get_post( $vid );
+		$event_content = wpautop( $post->post_content );
+		$prog_title = apply_filters( 'the_title', $programme->post_title );
+		$prog_details = wpautop( $programme->post_content );
+		$venue_name = apply_filters( 'the_title', $venue->post_title );
+		$venue_url = get_post_meta( $vid, '_url', true );
+		$venue_address = get_post_meta( $vid, '_address', true );
+
+		$content = '<h2>' . get_the_title() . '</h2>';
+		$content .= $event_content;
+
+		if ( $venue_url )
+			$content .= '<h3><a href="' . esc_attr( $venue_url ) . '">' . $venue_name . '</a></h3>';
+		else
+			$content .= '<h3>' . $venue_name . '</h3>';
+
+		if ( $venue_address )
+			$content .= wpautop( $venue_address );
+		$content .= '<h3>' . $prog_title . '</h3>';
+		$content .= $prog_details;
+
+		// $content .= '<p><time datetime="' . date( 'Y-m-d', $date ) . '">' . date( get_option( 'date_format' ), $date ) . '</time></p>';
+		// $content .= '<h3><strong>' . __( 'Programme:', 'concertpress' ) . '</strong> ' . $programme->post_title . '</h3>';
+
+		// $content .= '<strong>' . __( 'Venue:', 'concertpress' ) . '</strong> ' . get_the_title( $vid ) . '</p>';
+		// $content .= apply_filters( 'the_content', str_replace( ']]>', ']]&gt;', $event_content ) );
+		return apply_filters( 'concertpress_single_event', $content );
+	}
+
 }
 
 
 global $concertpress;
 $concertpress = new ConcertPress;
+
+add_shortcode( 'concertpress', array( 'ConcertPress', 'do_shortcode' ) );
+
