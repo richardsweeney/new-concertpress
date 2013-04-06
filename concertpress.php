@@ -128,11 +128,21 @@ class ConcertPress {
 			$this->_update_old_table_structure();
 		}
 
-	} // end plugin_textdomain
+	}
 
 
 	/** TO DO: Convert all the old tables to nice WP structure! */
 	function _update_old_table_structure() {
+		global $wpdb;
+		$sql = "SELECT * FROM {$wpdb->prefix}concertpress_events AS $events LEFT JOIN 	";
+		$old_events = $wpdb->get_results( $sql );
+
+		foreach ( $old_events as $oe ) {
+			$postarr = array(
+				''
+			);
+			wp_insert_post( $postarr, $wp_error = false )
+		}
 
 	}
 
