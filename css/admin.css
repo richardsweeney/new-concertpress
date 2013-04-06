@@ -2,7 +2,7 @@
 #convertpress-event-date-meta .inside,
 #convertpress-event-programme-meta .inside,
 #convertpress-event-venue-meta .inside {
-  padding: 5px 15px 5px;
+  padding: 5px 15px 15px;
 }
 
 /* line 11, ../sass/admin.scss */
@@ -40,8 +40,8 @@
 
 /* line 38, ../sass/admin.scss */
 .date input[type='text'] {
-  width: 120px;
-  padding: 5px;
+  width: 110px;
+  padding: 2px 5px;
   outline: 0;
   margin-bottom: 10px;
   -webkit-box-sizing: border-box;

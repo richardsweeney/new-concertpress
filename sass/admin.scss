@@ -4,7 +4,7 @@
 #convertpress-event-programme-meta,
 #convertpress-event-venue-meta {
     .inside {
-        padding: 5px 15px 5px;
+        padding: 5px 15px 15px;
     }
 }
 
@@ -36,8 +36,8 @@
 
 .date {
     input[type='text'] {
-        width: 120px;
-        padding: 5px;
+        width: 110px;
+        padding: 2px 5px;
         outline: 0;
         margin-bottom: 10px;
         @include box-sizing( border-box );
