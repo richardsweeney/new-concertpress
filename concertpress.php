@@ -35,6 +35,7 @@ class ConcertPress {
 
 		define( 'CONCERTPRESS_VERSION', '2.0' );
 		define( 'CONCERTPRESS_PATH', plugin_dir_path( __FILE__ ) );
+		define( 'CONCERTPRESS_URL', plugin_dir_url( __FILE__ ) );
 
 		// Load plugin text domain
 		add_action( 'init', array( $this, 'plugin_textdomain' ) );
@@ -87,6 +88,8 @@ class ConcertPress {
 
 		// Show a specific template for single events
 		add_filter( 'the_content', array( $this, 'include_event_template' ) );
+
+		add_action( 'pre_get_posts', array( $this, 'pre_get_posts' ) );
 
 
 	} // end constructor
@@ -155,7 +158,7 @@ class ConcertPress {
 		if ( in_array( get_current_screen()->id, array( 'event', 'venue', 'programme' ) ) ) {
 
 			wp_enqueue_style( 'jquery-ui', 'http://code.jquery.com/ui/1.10.2/themes/smoothness/jquery-ui.css' );
-			wp_enqueue_style( 'concertpress-admin-styles', plugins_url( 'concertpress/css/admin.css' ) );
+			wp_enqueue_style( 'concertpress-admin-styles', CONCERTPRESS_URL . 'css/admin.css' );
 		}
 
 	} // end register_admin_styles
@@ -175,7 +178,7 @@ class ConcertPress {
 			wp_enqueue_script( 'jquery' );
 			wp_enqueue_script( 'jquery-ui-core' );
 			wp_enqueue_script( 'jquery-ui-datepicker' );
-			wp_enqueue_script( 'concertpress-js', plugins_url( 'concertpress/js/admin.js' ), array( 'jquery' ), CONCERTPRESS_VERSION, true );
+			wp_enqueue_script( 'concertpress-js', CONCERTPRESS_URL . 'js/admin.js', array( 'jquery' ), CONCERTPRESS_VERSION, true );
 		}
 		$i18n = array(
 			'date_format'     => get_option( 'date_format' ),
@@ -195,7 +198,7 @@ class ConcertPress {
 	function register_plugin_styles() {
 
 		// TODO:	Change 'concertpress' to the name of your plugin
-		wp_enqueue_style( 'concertpress-plugin-styles', plugins_url( 'concertpress/css/display.css' ) );
+		wp_enqueue_style( 'concertpress-plugin-styles', CONCERTPRESS_URL . '/css/display.css' );
 
 	} // end register_plugin_styles
 
@@ -205,13 +208,9 @@ class ConcertPress {
 	function register_plugin_scripts() {
 
 		// TODO:	Change 'concertpress' to the name of your plugin
-		wp_enqueue_script( 'concertpress-plugin-script', plugins_url( 'concertpress/js/display.js' ) );
+		wp_enqueue_script( 'concertpress-plugin-script', CONCERTPRESS_URL . '/js/display.js' );
 
 	} // end register_plugin_scripts
-
-	/*--------------------------------------------*
-	 * Core Functions
-	 *---------------------------------------------*/
 
 
 	function create_custom_post_types() {
@@ -1007,42 +1006,78 @@ class ConcertPress {
 
 
 	function include_event_template( $content ) {
-		global $wp_query, $post;
+		global $post;
 
-		if ( ! isset( $wp_query->query_vars['post_type'] ) && 'event' != $wp_query->query_vars['post_type'] && ! is_single() )
+		if ( is_admin() || 'event' != get_post_type( $post ) )
 			return $content;
 
-		$date          = get_post_meta( $post->ID, '_start_date', true );
-		$pid           = get_post_meta( $post->ID, '_programme', true );
-		$programme     = get_post( $pid );
-		$vid           = get_post_meta( $post->ID, '_venue', true );
-		$venue         = get_post( $vid );
-		$event_content = wpautop( $post->post_content );
-		$prog_title = apply_filters( 'the_title', $programme->post_title );
-		$prog_details = wpautop( $programme->post_content );
-		$venue_name = apply_filters( 'the_title', $venue->post_title );
-		$venue_url = get_post_meta( $vid, '_url', true );
-		$venue_address = get_post_meta( $vid, '_address', true );
+		if ( '' != locate_template( 'single-event.php' ) )
+			return $content;
 
-		$content = '<h2>' . get_the_title() . '</h2>';
-		$content .= $event_content;
+		$pid       = (int) get_post_meta( $post->ID, '_programme', true );
+		$programme = get_post( $pid );
+		$vid       = (int) get_post_meta( $post->ID, '_venue', true );
+		$venue     = get_post( $vid );
 
-		if ( $venue_url )
-			$content .= '<h3><a href="' . esc_attr( $venue_url ) . '">' . $venue_name . '</a></h3>';
+		$date      = get_post_meta( $post->ID, '_start_date', true );
+		$end_date  = get_post_meta( $post->ID, '_end_date', true );
+		$ymd       = false;
+
+		if ( $date ) {
+			$ymd = date( 'Y-m-d', $date );
+			$date = date( get_option( 'date_format' ), $date );
+		} else {
+			$ymd = false;
+		}
+
+		// Create an object with properties belongining to the event,
+		// This should come in useful for the cp_single_event filter
+		$event                = new StdClass;
+		$event->ID            = $post->ID;
+		$event->start_date    = $date;
+		// $event->title         = apply_filters( 'the_title', get_the_title() );
+		$event->details       = wpautop( $post->post_content );
+		$event->prog_ID 	  = $pid;
+		$event->prog_title    = apply_filters( 'the_title', $programme->post_title );
+		$event->prog_details  = wpautop( $programme->post_content );
+		$event->venue_ID 	  = $vid;
+		$event->venue_name    = apply_filters( 'the_title', $venue->post_title );
+		$event->venue_address = get_post_meta( $vid, '_address', true );
+
+		if ( $end_date )
+			$event->end_date = date( get_option( 'date_format' ), $end_date );
 		else
-			$content .= '<h3>' . $venue_name . '</h3>';
+			$event->end_date = false;
 
-		if ( $venue_address )
-			$content .= wpautop( $venue_address );
-		$content .= '<h3>' . $prog_title . '</h3>';
-		$content .= $prog_details;
+		if ( get_post_meta( $vid, '_url', true ) )
+			$event->venue_url = esc_url( get_post_meta( $vid, '_url', true ) );
+		else
+			$event->venue_url = false;
 
-		// $content .= '<p><time datetime="' . date( 'Y-m-d', $date ) . '">' . date( get_option( 'date_format' ), $date ) . '</time></p>';
-		// $content .= '<h3><strong>' . __( 'Programme:', 'concertpress' ) . '</strong> ' . $programme->post_title . '</h3>';
+		apply_filters( 'cp_single_event', $event );
+		do_action( 'cp_before_single_event', $event );
 
-		// $content .= '<strong>' . __( 'Venue:', 'concertpress' ) . '</strong> ' . get_the_title( $vid ) . '</p>';
-		// $content .= apply_filters( 'the_content', str_replace( ']]>', ']]&gt;', $event_content ) );
-		return apply_filters( 'concertpress_single_event', $content );
+		$content .= "<p><time datetime='$ymd'>{$event->start_date}</time></p>\n";
+
+		if ( $event->venue_url )
+			$content .= "<h3><a href='{$event->venue_url}'>{$event->venue_name}</a></h3>\n";
+		else
+			$content .= "<h3>{$event->venue_name}</h3>\n";
+
+		$content .= $event->venue_address . "\n";
+		$content .= "<h3>{$event->prog_title}</h3>\n";
+		$content .= $event->prog_details . "\n";
+		$content .= $event->details . "\n";
+
+		do_action( 'cp_after_single_event', $event );
+
+		return apply_filters( 'cp_single_formatted_event', $content );
+
+	}
+
+	function pre_get_posts( $query ) {
+		if ( ! is_main_query() )
+			return;
 	}
 
 }
