@@ -137,15 +137,71 @@ class ConcertPress {
 	/** TO DO: Convert all the old tables to nice WP structure! */
 	function _update_old_table_structure() {
 		global $wpdb;
-		$sql = "SELECT * FROM {$wpdb->prefix}concertpress_events AS $events LEFT JOIN 	";
-		$old_events = $wpdb->get_results( $sql );
 
-		foreach ( $old_events as $oe ) {
-			$postarr = array(
-				''
-			);
-			wp_insert_post( $postarr, $wp_error = false )
+
+		// Get all old programmes
+		$sql            = "SELECT * FROM {$wpdb->prefix}concertpress_programmes";
+		$old_programmes = $wpdb->get_results( $sql );
+		$programme_map  = array();
+
+		foreach ( $old_programmes as $op ) {
+			if ( ! array_key_exists( $op->ID, $programme_map ) ) {
+				$postarr = array(
+					'post_type' => 'programme',
+				);
+
+				// Add old programmes to the database as post type 'programme'
+				$insert_id = wp_insert_post( $postarr );
+
+				// Add it to the map
+				$programme_map[ $op->ID ] = $insert_id;
+			}
 		}
+
+		// Reset this, just in case we get a previous value
+		$insert_id  = null;
+		$sql        = "SELECT * FROM {$wpdb->prefix}concertpress_venues";
+		$old_venues = $wpdb->get_results( $sql );
+		$venue_map  = array();
+
+		foreach ( $old_venues as $ov ) {
+			if ( ! array_key_exists( $ov->ID, $venue_map ) ) {
+				$postarr = array(
+					'post_type' => 'venue',
+				);
+
+				$insert_id = wp_insert_post( $postarr );
+				$venue_map[ $ov->ID ] = $insert_id;
+			}
+		}
+
+
+		$insert_id  = null;
+		$sql        = "SELECT * FROM {$wpdb->prefix}concertpress_events";
+		$old_events = $wpdb->get_results( $sql );
+		$event_map  = array();
+
+		foreach ( $old_events as $oe ) {
+			if ( ! array_key_exists( $oe->ID, $event_map ) ) {
+				$postarr = array(
+					'post_type' => 'event',
+				);
+
+				$insert_id = wp_insert_post( $postarr );
+				$event_map[ $oe->ID ] = $insert_id;
+
+				// Add programme and venue to event
+				$programme_id = $programme_map[ $oe->prog_id ];
+				$venue_id     = $venue_map[ $oe->venue_id ];
+				update_post_meta( $insert_id, '_programme', $programme_id );
+				update_post_meta( $insert_id, '_venue', $venue_id );
+			}
+		}
+
+		// Delete the old tables
+		$wpdb->query( "DROP TABLE {$wpdb->prefix}concertpress_programmes" );
+		$wpdb->query( "DROP TABLE {$wpdb->prefix}concertpress_venues" );
+		$wpdb->query( "DROP TABLE {$wpdb->prefix}concertpress_events" );
 
 	}
 
