@@ -30,15 +30,17 @@ class ConcertPress {
 
 	private $current_post;
 
+	public $version, $path, $url;
+
 
 	function __construct() {
 
-		define( 'CONCERTPRESS_VERSION', '2.0' );
-		define( 'CONCERTPRESS_PATH', plugin_dir_path( __FILE__ ) );
-		define( 'CONCERTPRESS_URL', plugin_dir_url( __FILE__ ) );
+		$this->version = '2.0' );
+		$this->path    = plugin_dir_path( __FILE__ );
+		$this->url     = plugin_dir_url( __FILE__ );
 
 		// Load plugin text domain
-		add_action( 'init', array( $this, 'plugin_textdomain' ) );
+		add_action( 'init', array( $this, 'initialize' ) );
 
 		// Register admin styles and scripts
 		add_action( 'admin_print_styles', array( $this, 'register_admin_styles' ) );
@@ -64,7 +66,7 @@ class ConcertPress {
 		register_deactivation_hook( __FILE__, array( $this, 'deactivate' ) );
 		register_uninstall_hook( __FILE__, 'self::uninstall' );
 
-		// Diverse text changes
+		// Diverse text + HTML filters
 		add_filter( 'enter_title_here', array( $this, 'custom_enter_title_here' ) );
 		add_filter( 'admin_body_class', array( $this, 'body_class_names' ) );
 
@@ -123,11 +125,12 @@ class ConcertPress {
 	/**
 	 * Loads the plugin text domain for translation
 	 */
-	function plugin_textdomain() {
-		$domain = 'concertpress';
-		load_plugin_textdomain( $domain, FALSE, dirname( plugin_basename( __FILE__ ) ) . '/lang/' );
+	function initialize() {
+
+		load_plugin_textdomain( 'concertpress', FALSE, dirname( plugin_basename( __FILE__ ) ) . '/lang/' );
+
 		if ( false === get_option( 'concertpress_version' ) ) {
-			add_option( 'concertpress_version', CONCERTPRESS_VERSION );
+			add_option( 'concertpress_version', $this->version );
 			$this->_update_old_table_structure();
 		}
 
@@ -214,7 +217,7 @@ class ConcertPress {
 		if ( in_array( get_current_screen()->id, array( 'event', 'venue', 'programme' ) ) ) {
 
 			wp_enqueue_style( 'jquery-ui', 'http://code.jquery.com/ui/1.10.2/themes/smoothness/jquery-ui.css' );
-			wp_enqueue_style( 'concertpress-admin-styles', CONCERTPRESS_URL . 'css/admin.css' );
+			wp_enqueue_style( 'concertpress-admin-styles', $this->url . 'css/admin.css' );
 		}
 
 	} // end register_admin_styles
@@ -234,7 +237,7 @@ class ConcertPress {
 			wp_enqueue_script( 'jquery' );
 			wp_enqueue_script( 'jquery-ui-core' );
 			wp_enqueue_script( 'jquery-ui-datepicker' );
-			wp_enqueue_script( 'concertpress-js', CONCERTPRESS_URL . 'js/admin.js', array( 'jquery' ), CONCERTPRESS_VERSION, true );
+			wp_enqueue_script( 'concertpress-js', $this->url . 'js/admin.js', array( 'jquery' ), $this->version, true );
 		}
 		$i18n = array(
 			'date_format'     => get_option( 'date_format' ),
@@ -254,7 +257,7 @@ class ConcertPress {
 	function register_plugin_styles() {
 
 		// TODO:	Change 'concertpress' to the name of your plugin
-		wp_enqueue_style( 'concertpress-plugin-styles', CONCERTPRESS_URL . '/css/display.css' );
+		wp_enqueue_style( 'concertpress-plugin-styles', $this->url . '/css/display.css' );
 
 	} // end register_plugin_styles
 
@@ -264,7 +267,7 @@ class ConcertPress {
 	function register_plugin_scripts() {
 
 		// TODO:	Change 'concertpress' to the name of your plugin
-		wp_enqueue_script( 'concertpress-plugin-script', CONCERTPRESS_URL . '/js/display.js' );
+		wp_enqueue_script( 'concertpress-plugin-script', $this->url . '/js/display.js' );
 
 	} // end register_plugin_scripts
 
@@ -316,7 +319,7 @@ class ConcertPress {
 			?>
 			<div class="error">
 				<?php foreach ( get_post_meta ( $post->ID, '_errors', true ) as $errors ) : ?>
-					<p><?php echo $errors; ?></p>
+					<p><?php echo $errors ?></p>
 				<?php endforeach; ?>
 			</div>
 			<?php
@@ -394,7 +397,7 @@ class ConcertPress {
 		switch ( $column ) {
 
 			case 'programme' :
-				$pid = get_post_meta( $post_id, '_programme', true );
+				$pid = (int) get_post_meta( $post_id, '_programme', true );
 				if ( $pid )
 					echo '<a href="' . admin_url( "post.php?post=$pid&action=edit" ) . '">' . get_the_title( $pid ) . '</a>';
 				else
@@ -402,7 +405,7 @@ class ConcertPress {
 				break;
 
 			case 'venue' :
-				$vid = get_post_meta( $post_id, '_venue', true );
+				$vid = (int) get_post_meta( $post_id, '_venue', true );
 				if ( $vid )
 					echo '<a href="' . admin_url( "post.php?post=$vid&action=edit" ) . '">' . get_the_title( $vid ) . '</a>';
 				else
@@ -609,9 +612,9 @@ class ConcertPress {
 		if ( $things->have_posts() ) : ?>
 			<label class="concertpress-label" for="<?php $name ?>"><?php printf( __( 'Select a %s', 'concertpress' ), $type ) ?></label>
 				<select class="concertpress-select" name="<?php echo $name ?>" id="<?php echo $name ?>">
-					<option value="0"><?php _e( '-- select --', 'concertpress' ); ?></option>
+					<option value="0"><?php _e( '-- select --', 'concertpress' ) ?></option>
 						<?php while( $things->have_posts() ) : ?>
-							<?php $things->the_post(); ?>
+							<?php $things->the_post() ?>
 							<option value="<?php esc_attr( the_ID() ) ?>" <?php selected( $value, get_the_ID() ) ?>><?php the_title() ?></option>
 						<?php endwhile; ?>
 					</select>
@@ -655,7 +658,7 @@ class ConcertPress {
 				<?php $hour = 0; ?>
 				<option value="none"> -- </option>
 				<?php while ( $hour < 24 ) : ?>
-					<?php $pad_hour = str_pad( $hour, 2, '0', STR_PAD_LEFT ); ?>
+					<?php $pad_hour = str_pad( $hour, 2, '0', STR_PAD_LEFT ) ?>
 					<option <?php selected( $saved_hour, $pad_hour ) ?> value="<?php echo $pad_hour ?>"><?php echo $pad_hour ?></option>
 					<?php $hour++; ?>
 				<?php endwhile; ?>
@@ -667,7 +670,7 @@ class ConcertPress {
 				<?php $min = 0; ?>
 				<option value="none"> -- </option>
 				<?php while ( $min < 60 ) : ?>
-					<?php $pad_min = str_pad( $min, 2, '0', STR_PAD_LEFT ); ?>
+					<?php $pad_min = str_pad( $min, 2, '0', STR_PAD_LEFT ) ?>
 					<option <?php selected( $saved_min, $pad_min ) ?> value="<?php echo $pad_min ?>"><?php echo $pad_min ?></option>
 					<?php $min += 5; ?>
 				<?php endwhile; ?>
@@ -988,10 +991,10 @@ class ConcertPress {
 						$vid  = get_post_meta( get_the_ID(), '_venue', true );
 					?>
 					<li>
-						<h3><a href="<?php the_permalink(); ?>"><?php the_title(); ?></a></h3>
-						<time datetime="<?php echo date( 'Y-m-d', $date ); ?>"><?php echo date( get_option( 'date_format' ), $date ); ?></time>
-						<p><?php _e( 'Programme:', 'concertpress' ); ?> <?php echo get_the_title( $pid ); ?></p>
-						<p><?php _e( 'Venue:', 'concertpress' ); ?> <?php echo get_the_title( $vid ); ?> </p>
+						<h3><a href="<?php the_permalink() ?>"><?php the_title() ?></a></h3>
+						<time datetime="<?php echo date( 'Y-m-d', $date ) ?>"><?php echo date( get_option( 'date_format' ), $date ) ?></time>
+						<p><?php _e( 'Programme:', 'concertpress' ) ?> <?php echo get_the_title( $pid ) ?></p>
+						<p><?php _e( 'Venue:', 'concertpress' ) ?> <?php echo get_the_title( $vid ) ?> </p>
 					</li>
 				<?php endwhile; ?>
 			</ul>
@@ -1009,11 +1012,11 @@ class ConcertPress {
 		?>
 	    <div class="wrap">
 	        <div id="icon-themes" class="icon32"></div>
-	        <h2><?php _e( 'Olab RSS Feed options', 'concertpress' ); ?></h2>
+	        <h2><?php _e( 'Olab RSS Feed options', 'concertpress' ) ?></h2>
 	        <form action="options.php" method="POST">
-	            <?php settings_fields( 'concertpress-settings-group' ); ?>
-	            <?php do_settings_sections( 'concertpress-options-page' ); ?>
-	            <?php submit_button(); ?>
+	            <?php settings_fields( 'concertpress-settings-group' ) ?>
+	            <?php do_settings_sections( 'concertpress-options-page' ) ?>
+	            <?php submit_button() ?>
 	        </form>
 	    </div>
 	    <?php
@@ -1054,7 +1057,7 @@ class ConcertPress {
 	    ?>
 	    <select id="concertpress_settings[limit]" name="concertpress_settings[limit]">
 	        <?php for ( $i = 1; $i <= 10; $i++ ) : ?>
-	            <option <?php selected( $num, $i ); ?> value="<?php echo $i; ?>"><?php echo $i; ?></option>
+	            <option <?php selected( $num, $i ) ?> value="<?php echo $i ?>"><?php echo $i ?></option>
 	        <?php endfor; ?>
 	    </select>
 	    <?php
