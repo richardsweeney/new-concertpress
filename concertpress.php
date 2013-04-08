@@ -35,10 +35,6 @@ class ConcertPress {
 
 	function __construct() {
 
-		$this->version = '2.0' );
-		$this->path    = plugin_dir_path( __FILE__ );
-		$this->url     = plugin_dir_url( __FILE__ );
-
 		// Load plugin text domain
 		add_action( 'init', array( $this, 'initialize' ) );
 
@@ -102,6 +98,12 @@ class ConcertPress {
 	 * @param	boolean	$network_wide	True if WPMU superadmin uses "Network Activate" action, false if WPMU is disabled or plugin is activated on an individual blog
 	 */
 	function activate( $network_wide ) {
+
+		if ( false === get_option( 'concertpress_version' ) ) {
+			update_option( 'concertpress_version', $this->version );
+			$this->_update_old_table_structure();
+		}
+
 	}
 
 	/**
@@ -127,12 +129,16 @@ class ConcertPress {
 	 */
 	function initialize() {
 
+		$this->version = 2.0;
+		$this->path    = plugin_dir_path( __FILE__ );
+		$this->url     = plugin_dir_url( __FILE__ );
+
+		// i18n
 		load_plugin_textdomain( 'concertpress', FALSE, dirname( plugin_basename( __FILE__ ) ) . '/lang/' );
 
-		if ( false === get_option( 'concertpress_version' ) ) {
-			add_option( 'concertpress_version', $this->version );
-			$this->_update_old_table_structure();
-		}
+		$version = get_option( 'concertpress_version' );
+		if ( false === $version || $this->version != $version )
+				update_option( 'concertpres_version', $this->version );
 
 	}
 
@@ -141,13 +147,12 @@ class ConcertPress {
 	function _update_old_table_structure() {
 		global $wpdb;
 
-
 		// Get all old programmes
 		$sql            = "SELECT * FROM {$wpdb->prefix}concertpress_programmes";
 		$old_programmes = $wpdb->get_results( $sql );
 		$programme_map  = array();
 
-		foreach ( $old_programmes as $op ) {
+		foreach ( $old_programmes as $op ) {
 			if ( ! array_key_exists( $op->ID, $programme_map ) ) {
 				$postarr = array(
 					'post_type' => 'programme',
@@ -167,7 +172,7 @@ class ConcertPress {
 		$old_venues = $wpdb->get_results( $sql );
 		$venue_map  = array();
 
-		foreach ( $old_venues as $ov ) {
+		foreach ( $old_venues as $ov ) {
 			if ( ! array_key_exists( $ov->ID, $venue_map ) ) {
 				$postarr = array(
 					'post_type' => 'venue',
@@ -201,7 +206,7 @@ class ConcertPress {
 			}
 		}
 
-		// Delete the old tables
+		// Remove the old tables
 		$wpdb->query( "DROP TABLE {$wpdb->prefix}concertpress_programmes" );
 		$wpdb->query( "DROP TABLE {$wpdb->prefix}concertpress_venues" );
 		$wpdb->query( "DROP TABLE {$wpdb->prefix}concertpress_events" );
